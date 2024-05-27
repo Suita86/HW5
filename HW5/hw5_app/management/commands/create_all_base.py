@@ -1,23 +1,40 @@
 from django.core.management.base import BaseCommand
-from hw3_app.models import Client
+from hw5_app.models import Order, Client, Product
+from django.utils.crypto import get_random_string
+from django.utils.timezone import now
+from decimal import Decimal
+import random
 
 class Command(BaseCommand):
-    help = 'Add a client to the database'
+    help = 'Populate the database with sample orders and related data'
 
-    def add_arguments(self, parser):
-        parser.add_argument('name', type=str, help='Client name')
-        parser.add_argument('email', type=str, help='Client email')
-        parser.add_argument('phone_number', type=str, help='Client phone number')
-        parser.add_argument('address', type=str, help='Client address')
+    def handle(self, *args, **options):
+        # Создаем несколько клиентов
+        clients = [Client.objects.create(
+            name=f'Client {i}',
+            email=f'client{i}@example.com',
+            phone_number=f'12345678{i}',
+            address=f'Street {i}'
+        ) for i in range(1, 6)]
 
-    def handle(self, *args, **kwargs):
-        name = kwargs.get('name')
-        email = kwargs.get('email')
-        phone_number = kwargs.get('phone_number')
-        address = kwargs.get('address')
+        # Создаем несколько товаров
+        products = [Product.objects.create(
+            name=f'Product {i}',
+            description=f'Description for Product {i}',
+            price=Decimal(random.uniform(10, 100)),
+            quantity=random.randint(1, 10)
+        ) for i in range(1, 11)]
 
-        # Call the create_client function to add a client to the database
-        client = Client(name=name, email=email, phone_number=phone_number, address=address)
-        client.save()
+        # Создаем несколько заказов и связанных продуктов
+        for i in range(1, 6):
+            client = random.choice(clients)
+            products_in_order = random.sample(products, random.randint(1, 5))
+            total_amount = sum(product.price * product.quantity for product in products_in_order)
+            order = Order.objects.create(
+                client=client,
+                total_amount=total_amount,
+                order_date=now()
+            )
+            order.products.set(products_in_order)
 
-        self.stdout.write(self.style.SUCCESS(f'Successfully added client: {name}'))
+        self.stdout.write(self.style.SUCCESS('Successfully populated the database with sample orders.'))
